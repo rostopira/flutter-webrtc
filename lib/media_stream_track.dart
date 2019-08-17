@@ -21,12 +21,21 @@ class MediaStreamTrack {
   String get kind => _kind;
   String get id => _trackId;
 
-  void switchCamera() async {
-    await _channel.invokeMethod(
+  Future<bool> switchCamera() =>
+    _channel.invokeMethod(
       'mediaStreamTrackSwitchCamera',
       <String, dynamic>{'trackId': _trackId},
     );
-  }
+
+  Future<void> adaptRes(int width, int height) =>
+    _channel.invokeMethod(
+      'mediaStreamTrackAdaptRes',
+      <String, dynamic>{
+        'trackId': _trackId,
+        'width': width,
+        'height': height,
+      },
+    );
 
   void setVolume(double volume) async {
     await _channel.invokeMethod(
@@ -35,10 +44,20 @@ class MediaStreamTrack {
     );
   }
 
-  captureFrame(String filePath) =>
+  captureFrame(String filePath, int rotation) =>
     _channel.invokeMethod(
       'captureFrame',
-      <String, dynamic>{'trackId':_trackId, 'path': filePath},
+      <String, dynamic>{
+        'trackId':_trackId,
+        'path': filePath,
+        'rotation': (rotation ?? 0) * 90,
+      },
+    );
+
+  torch(bool enabled) =>
+    _channel.invokeMethod(
+      'torch',
+      {'trackId': _trackId, 'enabled': enabled}
     );
 
   Future<void> dispose() async {

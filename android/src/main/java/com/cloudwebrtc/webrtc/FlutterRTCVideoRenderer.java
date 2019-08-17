@@ -1,9 +1,12 @@
 package com.cloudwebrtc.webrtc;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.graphics.SurfaceTexture;
 
+import com.cloudwebrtc.webrtc.utils.AnyThreadSink;
 import com.cloudwebrtc.webrtc.utils.ConstraintsMap;
 import com.cloudwebrtc.webrtc.utils.EglUtils;
 
@@ -115,7 +118,7 @@ public class FlutterRTCVideoRenderer implements EventChannel.StreamHandler {
 
     @Override
     public void onListen(Object o, EventChannel.EventSink sink) {
-        eventSink = sink;
+        eventSink = new AnyThreadSink(sink);
     }
 
     @Override

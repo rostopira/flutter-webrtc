@@ -2,6 +2,7 @@ package com.cloudwebrtc.webrtc;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.ref.SoftReference;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,8 +13,10 @@ import java.util.Map;
 import android.util.Base64;
 import android.util.Log;
 import android.util.SparseArray;
+
 import androidx.annotation.Nullable;
 
+import com.cloudwebrtc.webrtc.utils.AnyThreadSink;
 import com.cloudwebrtc.webrtc.utils.ConstraintsArray;
 import com.cloudwebrtc.webrtc.utils.ConstraintsMap;
 
@@ -23,7 +26,10 @@ import org.webrtc.IceCandidate;
 import org.webrtc.MediaStream;
 import org.webrtc.MediaStreamTrack;
 import org.webrtc.PeerConnection;
+import org.webrtc.RtpParameters;
 import org.webrtc.RtpReceiver;
+import org.webrtc.RtpSender;
+import org.webrtc.RtpTransceiver;
 import org.webrtc.StatsObserver;
 import org.webrtc.StatsReport;
 import org.webrtc.VideoTrack;
@@ -80,7 +86,7 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
 
     @Override
     public void onListen(Object o, EventChannel.EventSink sink) {
-        eventSink = sink;
+        eventSink = new AnyThreadSink(sink);
     }
 
     @Override
@@ -99,6 +105,13 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
     void close() {
         eventChannel.setStreamHandler(null);
         peerConnection.close();
+        try {
+            Field f = peerConnection.getClass().getDeclaredField("localStreams");
+            f.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            List<MediaStream> localStreams = (List<MediaStream>) f.get(peerConnection);
+            localStreams.clear();
+        } catch (Exception ignored) {}
         peerConnection.dispose();
         remoteStreams.clear();
         remoteTracks.clear();
@@ -133,12 +146,12 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
         // longer support them (in the face of multiple reported issues of
         // breakages).
         int dataChannelId = init.id;
-        if (dataChannel != null && -1 != dataChannelId) {
+        if (dataChannel != null) {
             dataChannels.put(dataChannelId, dataChannel);
             registerDataChannelObserver(dataChannelId, dataChannel);
 
             ConstraintsMap params = new ConstraintsMap();
-            params.putInt("id", dataChannel.id());
+            params.putInt("id", dataChannelId);
             params.putString("label", dataChannel.label());
             result.success(params.toMap());
         }else{
@@ -184,6 +197,11 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
     }
 
     void getStats(String trackId, final Result result) {
+        for (RtpSender sender : peerConnection.getSenders()) {
+            for (RtpParameters.Encoding encoding : sender.getParameters().encodings) {
+                encoding.minBitrateBps = 2000 * 1024 * 8;
+            }
+        }
         MediaStreamTrack track = null;
         if (trackId == null
                 || trackId.isEmpty()
@@ -284,6 +302,11 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
 
     @Override
     public void onAddStream(MediaStream mediaStream) {
+        for (RtpSender sender : peerConnection.getSenders()) {
+            for (RtpParameters.Encoding encoding : sender.getParameters().encodings) {
+                encoding.minBitrateBps = 2000 * 1024 * 8;
+            }
+        }
         String streamUID = null;
         String streamId = mediaStream.getId();
         // The native WebRTC implementation has a special concept of a default
@@ -349,7 +372,7 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
 
 
     void sendEvent(ConstraintsMap event) {
-        if(eventSink != null )
+        if(eventSink != null)
             eventSink.success(event.toMap());
     }
 
@@ -514,4 +537,19 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
         }
         return null;
     }
+
+    @Override
+    public void onTrack(RtpTransceiver transceiver) {
+        final RtpSender rtpSender = transceiver.getSender();
+        if (rtpSender == null) {
+            Log.wtf(TAG, "RtpSender is null");
+            return;
+        }
+        final RtpParameters parameters = rtpSender.getParameters();
+        for (RtpParameters.Encoding encoding : parameters.encodings) {
+            Log.wtf(TAG, "RtpSender minbitrate set");
+            encoding.minBitrateBps = 2000 * 1024 * 8;
+        }
+    }
+
 }

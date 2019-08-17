@@ -11,7 +11,10 @@
 
 -(void)getSources:(FlutterResult)result;
 
--(void)mediaStreamTrackSwitchCamera:(RTCMediaStreamTrack *)track;
+-(void)mediaStreamTrackSwitchCamera:(RTCMediaStreamTrack *)track
+                             result:(FlutterResult) result;
+
+-(void)mediaStreamTrackAdaptRes:(RTCMediaStreamTrack *)track height:(NSNumber *)height width:(NSNumber *)width result:(FlutterResult)result;
 @end
 
 

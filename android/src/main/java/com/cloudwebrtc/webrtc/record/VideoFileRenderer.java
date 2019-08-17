@@ -50,7 +50,7 @@ class VideoFileRenderer implements VideoSink, SamplesReadyCallback {
     private Surface surface;
     private MediaCodec audioEncoder;
 
-    VideoFileRenderer(String outputFile, final EglBase.Context sharedContext, boolean withAudio) throws IOException {
+    VideoFileRenderer(String outputFile, final EglBase.Context sharedContext, boolean withAudio, int rotation) throws IOException {
         renderThread = new HandlerThread(TAG + "RenderThread");
         renderThread.start();
         renderThreadHandler = new Handler(renderThread.getLooper());
@@ -70,6 +70,7 @@ class VideoFileRenderer implements VideoSink, SamplesReadyCallback {
         // obtained from the encoder after it has started processing data.
         mediaMuxer = new MediaMuxer(outputFile,
                 MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
+        mediaMuxer.setOrientationHint(rotation % 360);
 
         audioTrackIndex = withAudio ? -1 : 0;
     }
@@ -81,7 +82,7 @@ class VideoFileRenderer implements VideoSink, SamplesReadyCallback {
         // configure() call to throw an unhelpful exception.
         format.setInteger(MediaFormat.KEY_COLOR_FORMAT,
                 MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
-        format.setInteger(MediaFormat.KEY_BIT_RATE, 6000000);
+        format.setInteger(MediaFormat.KEY_BIT_RATE, 2500000);
         format.setInteger(MediaFormat.KEY_FRAME_RATE, FRAME_RATE);
         format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL);
 
@@ -130,17 +131,30 @@ class VideoFileRenderer implements VideoSink, SamplesReadyCallback {
         isRunning = false;
         if (audioThreadHandler != null)
             audioThreadHandler.post(() -> {
-                audioEncoder.stop();
-                audioEncoder.release();
-                audioThread.quit();
+                try {
+                    audioEncoder.stop();
+                    audioEncoder.release();
+                } catch (Exception ignored) {
+                } finally {
+                    audioThread.quit();
+                }
             });
         renderThreadHandler.post(() -> {
-            encoder.stop();
-            encoder.release();
-            eglBase.release();
-            mediaMuxer.stop();
-            mediaMuxer.release();
-            renderThread.quit();
+            try {
+                if (encoder != null) {
+                    encoder.stop();
+                    encoder.release();
+                }
+                if (eglBase != null)
+                    eglBase.release();
+                if (mediaMuxer != null) {
+                    mediaMuxer.stop();
+                    mediaMuxer.release();
+                }
+            } catch (Exception ignored) {
+            } finally {
+                renderThread.quit();
+            }
         });
     }
 

@@ -67,6 +67,7 @@ class MediaStream {
   }
 
   Future<Null> dispose() async {
+    print("⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️⛽️");
     await _channel.invokeMethod(
       'streamDispose',
       <String, dynamic>{'streamId': _streamId},

@@ -5,6 +5,7 @@ import 'rtc_data_channel.dart';
 class WebRTC {
   static const MethodChannel _channel = const MethodChannel('cloudwebrtc.com/WebRTC.Method');
   static MethodChannel methodChannel() => _channel;
+//  static const EventChannel codecEventChannel = const EventChannel("codec_reporter_events");
 }
 
 RTCIceConnectionState iceConnectionStateForString(String state) {

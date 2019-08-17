@@ -473,9 +473,9 @@
 }
 
 - (void)peerConnection:(RTCPeerConnection*)peerConnection didOpenDataChannel:(RTCDataChannel*)dataChannel {
-    if (-1 == dataChannel.channelId) {
-        return;
-    }
+//    if (-1 == dataChannel.channelId) {
+//        return;
+//    }
 
     NSNumber *dataChannelId = [NSNumber numberWithInteger:dataChannel.channelId];
     dataChannel.peerConnectionId = peerConnection.flutterId;
@@ -487,6 +487,7 @@
                                          binaryMessenger:self.messenger];
     
     dataChannel.eventChannel = eventChannel;
+    dataChannel.flutterChannelId = dataChannelId;
     [eventChannel setStreamHandler:dataChannel];
     
     FlutterEventSink eventSink = peerConnection.eventSink;

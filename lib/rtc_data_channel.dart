@@ -35,14 +35,14 @@ typedef void RTCDataChannelOnMessageCallback(String data);
 class RTCDataChannel {
   String _peerConnectionId;
   String _label;
-  int _dataChannelId;
+  int dataChannelId;
   MethodChannel _channel = WebRTC.methodChannel();
   StreamSubscription<dynamic> _eventSubscription;
   RTCDataChannelStateCallback onDataChannelState;
   RTCDataChannelOnMessageCallback onMessage;
 
-  RTCDataChannel(this._peerConnectionId, this._label, this._dataChannelId){
-    _eventSubscription = _eventChannelFor(_dataChannelId)
+  RTCDataChannel(this._peerConnectionId, this._label, this.dataChannelId){
+    _eventSubscription = _eventChannelFor(dataChannelId)
         .receiveBroadcastStream()
         .listen(eventListener, onError: errorListener);
   }
@@ -82,7 +82,7 @@ class RTCDataChannel {
   void send(String type, dynamic data){
     _channel.invokeMethod('dataChannelSend',
         <String, dynamic>{ 'peerConnectionId': _peerConnectionId,
-        'dataChannelId': _dataChannelId,
+        'dataChannelId': dataChannelId,
         'type': type,
         'data': data});
   }
@@ -90,6 +90,6 @@ class RTCDataChannel {
   Future<void> close() async {
     await _eventSubscription?.cancel();
     await _channel.invokeMethod('dataChannelClose',
-        <String, dynamic>{'peerConnectionId': _peerConnectionId, 'dataChannelId': _dataChannelId});
+        <String, dynamic>{'peerConnectionId': _peerConnectionId, 'dataChannelId': dataChannelId});
   }
 }

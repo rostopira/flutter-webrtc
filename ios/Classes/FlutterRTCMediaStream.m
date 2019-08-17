@@ -473,17 +473,44 @@ typedef void (^NavigatorUserMediaSuccessCallback)(RTCMediaStream *mediaStream);
   }
 }
 
--(void)mediaStreamTrackSwitchCamera:(RTCMediaStreamTrack *)track
+-(void)mediaStreamTrackSwitchCamera:(RTCMediaStreamTrack *)track result:(FlutterResult)result
 {
     if (!self.videoCapturer) {
-        NSLog(@"Video capturer is null. Can't switch camera");
+        result([FlutterError errorWithCode:@"Video capturer is null. Can't switch camera" message:nil details:nil]);
         return;
     }
     self._usingFrontCamera = !self._usingFrontCamera;
     AVCaptureDevicePosition position = self._usingFrontCamera ? AVCaptureDevicePositionFront : AVCaptureDevicePositionBack;
     AVCaptureDevice *videoDevice = [self findDeviceForPosition:position];
     AVCaptureDeviceFormat *selectedFormat = [self selectFormatForDevice:videoDevice];
-    [self.videoCapturer startCaptureWithDevice:videoDevice format:selectedFormat fps:[self selectFpsForFormat:selectedFormat]];
+    [self.videoCapturer startCaptureWithDevice:videoDevice format:selectedFormat fps:[self selectFpsForFormat:selectedFormat] completionHandler:^(NSError* error){
+        if (error != nil) {
+            result([FlutterError errorWithCode:@"Error while switching camera" message:@"Error while switching camera" details:error]);
+        } else {
+            result([NSNumber numberWithBool:self._usingFrontCamera]);
+        }
+    }];
+}
+
+
+-(void)mediaStreamTrackAdaptRes:(RTCMediaStreamTrack *)track height:(NSNumber *)height width:(NSNumber *)width result:(FlutterResult)result
+{
+    if (!self.videoCapturer) {
+        result([FlutterError errorWithCode:@"Video capturer is null. Can't switch camera" message:nil details:nil]);
+        return;
+    }
+    AVCaptureDevicePosition position = self._usingFrontCamera ? AVCaptureDevicePositionFront : AVCaptureDevicePositionBack;
+    self._targetHeight = height.intValue;
+    self._targetWidth = width.intValue;
+    AVCaptureDevice *videoDevice = [self findDeviceForPosition:position];
+    AVCaptureDeviceFormat *selectedFormat = [self selectFormatForDevice:videoDevice];
+    [self.videoCapturer startCaptureWithDevice:videoDevice format:selectedFormat fps:[self selectFpsForFormat:selectedFormat] completionHandler:^(NSError* error){
+        if (error != nil) {
+            result([FlutterError errorWithCode:@"Error while adapting resolution" message:@"Error" details:error]);
+        } else {
+            result(nil);
+        }
+    }];
 }
 
 -(void)mediaStreamTrackStop:(RTCMediaStreamTrack *)track

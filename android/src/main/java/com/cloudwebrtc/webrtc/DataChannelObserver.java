@@ -1,10 +1,15 @@
 package com.cloudwebrtc.webrtc;
 
 import java.nio.charset.Charset;
+
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Base64;
 
 import org.webrtc.DataChannel;
 import io.flutter.plugin.common.EventChannel;
+
+import com.cloudwebrtc.webrtc.utils.AnyThreadSink;
 import com.cloudwebrtc.webrtc.utils.ConstraintsMap;
 
 class DataChannelObserver implements DataChannel.Observer, EventChannel.StreamHandler {
@@ -43,7 +48,7 @@ class DataChannelObserver implements DataChannel.Observer, EventChannel.StreamHa
 
     @Override
     public void onListen(Object o, EventChannel.EventSink sink) {
-        eventSink = sink;
+        eventSink = new AnyThreadSink(sink);
     }
 
     @Override
@@ -58,7 +63,7 @@ class DataChannelObserver implements DataChannel.Observer, EventChannel.StreamHa
     public void onStateChange() {
         ConstraintsMap params = new ConstraintsMap();
         params.putString("event", "dataChannelStateChanged");
-        params.putInt("id", mDataChannel.id());
+        params.putInt("id", mId);
         params.putString("state", dataChannelStateString(mDataChannel.state()));
         sendEvent(params);
     }
@@ -67,7 +72,7 @@ class DataChannelObserver implements DataChannel.Observer, EventChannel.StreamHa
     public void onMessage(DataChannel.Buffer buffer) {
         ConstraintsMap params = new ConstraintsMap();
         params.putString("event", "dataChannelReceiveMessage");
-        params.putInt("id", mDataChannel.id());
+        params.putInt("id", mId);
 
         byte[] bytes;
         if (buffer.data.hasArray()) {
@@ -89,7 +94,8 @@ class DataChannelObserver implements DataChannel.Observer, EventChannel.StreamHa
     }
 
     void sendEvent(ConstraintsMap params) {
-        if(eventSink != null)
+        if(eventSink != null) {
             eventSink.success(params.toMap());
+        }
     }
 }

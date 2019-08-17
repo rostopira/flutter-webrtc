@@ -1,6 +1,8 @@
 package org.webrtc.audio;
 
 import android.media.AudioTrack;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import com.cloudwebrtc.webrtc.record.AudioTrackInterceptor;
@@ -8,6 +10,7 @@ import com.cloudwebrtc.webrtc.record.AudioTrackInterceptor;
 import org.webrtc.audio.JavaAudioDeviceModule.SamplesReadyCallback;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 /**
  * Awful hack
@@ -53,6 +56,23 @@ public abstract class WebRtcAudioTrackUtils {
         } catch (Exception e) {
             Log.w(TAG, "Failed to detach callback", e);
         }
+    }
+
+    public static void pokeInput(JavaAudioDeviceModule audioDeviceModule) {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            try {
+                Field audioInputField = audioDeviceModule.getClass().getDeclaredField("audioInput");
+                audioInputField.setAccessible(true);
+                WebRtcAudioRecord audioInput = (WebRtcAudioRecord) audioInputField.get(audioDeviceModule);
+                final Method startMethod = audioInput.getClass().getDeclaredMethod("startRecording");
+                startMethod.setAccessible(true);
+                startMethod.invoke(audioInput);
+            } catch (Exception e) {
+                Log.wtf(TAG, e);
+            } catch (AssertionError ae) {
+                Log.wtf(TAG, ae);
+            }
+        });
     }
 
 }

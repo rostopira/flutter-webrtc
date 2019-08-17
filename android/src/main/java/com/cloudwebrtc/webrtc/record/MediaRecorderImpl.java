@@ -17,11 +17,16 @@ public class MediaRecorderImpl {
     private VideoFileRenderer videoFileRenderer;
     private boolean isRunning = false;
     private File recordFile;
+    public final Integer rotation;
 
-    public MediaRecorderImpl(Integer id, @Nullable VideoTrack videoTrack, @Nullable AudioSamplesInterceptor audioInterceptor) {
+    public MediaRecorderImpl(Integer id, @Nullable VideoTrack videoTrack, @Nullable AudioSamplesInterceptor audioInterceptor, @Nullable Integer rotation) {
         this.id = id;
         this.videoTrack = videoTrack;
         this.audioInterceptor = audioInterceptor;
+        if (rotation != null)
+            this.rotation = rotation;
+        else
+            this.rotation = 0;
     }
 
     public void startRecording(File file) throws Exception {
@@ -35,7 +40,8 @@ public class MediaRecorderImpl {
             videoFileRenderer = new VideoFileRenderer(
                 file.getAbsolutePath(),
                 EglUtils.getRootEglBaseContext(),
-                audioInterceptor != null
+                audioInterceptor != null,
+                rotation
             );
             videoTrack.addSink(videoFileRenderer);
             if (audioInterceptor != null)

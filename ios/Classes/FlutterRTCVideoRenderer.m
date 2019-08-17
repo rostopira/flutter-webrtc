@@ -16,6 +16,7 @@
     CVPixelBufferRef _pixelBufferRef;
     RTCVideoRotation _rotation;
     FlutterEventChannel* _eventChannel;
+    bool _isFirstFrameRendered;
 }
 
 @synthesize textureId  = _textureId;
@@ -27,6 +28,7 @@
                    messenger:(NSObject<FlutterBinaryMessenger>*)messenger{
     self = [super init];
     if (self){
+        _isFirstFrameRendered = false;
         _renderSize = renderSize;
         _registry = registry;
         _pixelBufferRef = nil;
@@ -165,7 +167,6 @@
 
 #pragma mark - RTCVideoRenderer methods
 - (void)renderFrame:(RTCVideoFrame *)frame {
-
     [self copyI420ToCVPixelBuffer:_pixelBufferRef withFrame:frame];
     
     __weak FlutterRTCVideoRenderer *weakSelf = self;
@@ -189,6 +190,12 @@
     dispatch_async(dispatch_get_main_queue(), ^{
         FlutterRTCVideoRenderer *strongSelf = weakSelf;
         [strongSelf.registry textureFrameAvailable:strongSelf.textureId];
+        if (!strongSelf->_isFirstFrameRendered) {
+            if (strongSelf.eventSink) {
+                strongSelf.eventSink(@{@"event":@"didFirstFrameRendered"});
+                strongSelf->_isFirstFrameRendered = true;
+            }
+        }
     });
 }
 
@@ -203,10 +210,13 @@
         if(_pixelBufferRef){
             CVBufferRelease(_pixelBufferRef);
         }
+        size_t w = (size_t) roundf(size.width);
+        size_t h = (size_t) roundf(size.height);
+        NSDictionary *pixelAttributes = @{(id)kCVPixelBufferIOSurfacePropertiesKey : @{}};
         CVPixelBufferCreate(kCFAllocatorDefault,
-                            size.width, size.height,
+                            w, h,
                             kCVPixelFormatType_32BGRA,
-                            NULL, &_pixelBufferRef);
+                            (__bridge CFDictionaryRef)(pixelAttributes), &_pixelBufferRef);
     }
     
     __weak FlutterRTCVideoRenderer *weakSelf = self;
@@ -251,7 +261,7 @@
     RTCVideoTrack *videoTrack;
     RTCMediaStream *stream = [self streamForId:streamId];
     if(stream){
-        NSArray *videoTracks = stream ? stream.videoTracks : nil;
+        NSArray *videoTracks = stream.videoTracks;
         videoTrack = videoTracks && videoTracks.count ? videoTracks[0] : nil;
         if (!videoTrack) {
             NSLog(@"No video track for RTCMediaStream: %@", streamId);

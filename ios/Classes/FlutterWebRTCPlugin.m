@@ -3,6 +3,8 @@
 #import "FlutterRTCMediaStream.h"
 #import "FlutterRTCDataChannel.h"
 #import "FlutterRTCVideoRenderer.h"
+#import "FlutterRTCMediaRecorder.h"
+#import "FlutterRTCFrameCapturer.h"
 
 #import <AVFoundation/AVFoundation.h>
 #import <WebRTC/WebRTC.h>
@@ -54,11 +56,15 @@
     _peerConnectionFactory = [[RTCPeerConnectionFactory alloc]
                               initWithEncoderFactory:encoderFactory
                               decoderFactory:decoderFactory];
+    RTCPeerConnectionFactoryOptions *options = [RTCPeerConnectionFactoryOptions new];
+//    options.disableEncryption = true;
+    [_peerConnectionFactory setOptions:options];
     
     self.peerConnections = [NSMutableDictionary new];
     self.localStreams = [NSMutableDictionary new];
     self.localTracks = [NSMutableDictionary new];
     self.renders = [[NSMutableDictionary alloc] init];
+    self.recorders = [NSMutableDictionary new];
     return self;
 }
 
@@ -276,10 +282,10 @@
     }else if([@"mediaStreamTrackSetEnable" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
         NSString* trackId = argsMap[@"trackId"];
-        BOOL enabled = argsMap[@"enabled"];
+        NSNumber* enabled = argsMap[@"enabled"];
         RTCMediaStreamTrack *track = self.localTracks[trackId];
         if(track != nil){
-            track.isEnabled = enabled;
+            track.isEnabled = enabled.boolValue;
         }
         result(nil);
     }else if([@"trackDispose" isEqualToString:call.method]){
@@ -344,16 +350,33 @@
         RTCMediaStreamTrack *track = self.localTracks[trackId];
         if (track != nil && [track isKindOfClass:[RTCVideoTrack class]]) {
             RTCVideoTrack *videoTrack = (RTCVideoTrack *)track;
-            [self mediaStreamTrackSwitchCamera:videoTrack];
+            [self mediaStreamTrackSwitchCamera:videoTrack result:result];
         } else {
             if (track == nil) {
                 NSLog(@"Track is nil");
             } else {
                 NSLog([@"Track is class of " stringByAppendingString:[[track class] description]]);
             }
+            result(nil);
         }
-        result(nil);
-    }else if ([@"setVolume" isEqualToString:call.method]){
+    }else if ([@"mediaStreamTrackAdaptRes" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSString* trackId = argsMap[@"trackId"];
+        NSNumber* width = argsMap[@"width"];
+        NSNumber* height = argsMap[@"height"];
+        RTCMediaStreamTrack *track = self.localTracks[trackId];
+        if (track != nil && [track isKindOfClass:[RTCVideoTrack class]]) {
+            RTCVideoTrack *videoTrack = (RTCVideoTrack *)track;
+            [self mediaStreamTrackAdaptRes:videoTrack height:height width:width result:result];
+        } else {
+            if (track == nil) {
+                NSLog(@"Track is nil");
+            } else {
+                NSLog([@"Track is class of " stringByAppendingString:[[track class] description]]);
+            }
+            result(nil);
+        }
+    }else  if ([@"setVolume" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
         NSString* trackId = argsMap[@"trackId"];
         NSNumber* volume = argsMap[@"volume"];
@@ -363,6 +386,43 @@
             RTCAudioSource *audioSource = audioTrack.source;
             audioSource.volume = [volume doubleValue];
         }
+        result(nil);
+    }else if ([@"startRecordToFile" isEqualToString:call.method]) {
+        NSDictionary* argsMap = call.arguments;
+        NSNumber* recorderId = argsMap[@"recorderId"];
+        NSString* path = argsMap[@"path"];
+        NSString* trackId = argsMap[@"videoTrackId"];
+        NSString* audioTrackId = argsMap[@"audioTrackId"];
+        NSNumber* rotation = argsMap[@"rotation"];
+        RTCMediaStreamTrack *track = self.localTracks[trackId];
+        RTCMediaStreamTrack *audioTrack = self.localTracks[audioTrackId];
+        if (track != nil && [track isKindOfClass:[RTCVideoTrack class]]) {
+            NSURL* pathUrl = [NSURL fileURLWithPath:path];
+            self.recorders[recorderId] = [[FlutterRTCMediaRecorder alloc]
+                    initWithVideoTrack:(RTCVideoTrack *)track
+                       rotationDegrees:rotation
+                            audioTrack:(RTCAudioTrack *)audioTrack
+                            outputFile:pathUrl
+            ];
+        }
+        result(nil);
+    }else if ([@"stopRecordToFile" isEqualToString:call.method]) {
+        NSDictionary* argsMap = call.arguments;
+        NSNumber* recorderId = argsMap[@"recorderId"];
+        FlutterRTCMediaRecorder* recorder = self.recorders[recorderId];
+        if (recorder) {
+            [recorder stop];
+            [self.recorders removeObjectForKey:recorderId];
+        }
+        result(nil);
+    }else if([@"captureFrame" isEqualToString:call.method]) {
+        NSDictionary* argsMap = call.arguments;
+        NSString* path = argsMap[@"path"];
+        NSString* trackId = argsMap[@"trackId"];
+        NSNumber* rotation = argsMap[@"rotation"];
+        RTCMediaStreamTrack *track = self.localTracks[trackId];
+        if ([track isKindOfClass:RTCVideoTrack.class])
+            [[FlutterRTCFrameCapturer alloc] initWithVideoTrack:(RTCAudioTrack *)track filePath:path rotationDegrees:rotation];
         result(nil);
     }else{
         result(FlutterMethodNotImplemented);

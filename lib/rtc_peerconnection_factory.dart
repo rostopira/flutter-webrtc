@@ -24,3 +24,6 @@ Future<RTCPeerConnection> createPeerConnection(Map<String,dynamic> configuration
     String peerConnectionId = response['peerConnectionId'];
     return new RTCPeerConnection(peerConnectionId);
 }
+
+setHardwareDecoder({bool enabled}) =>
+  WebRTC.methodChannel().invokeMethod("setHardwareDecoder", enabled);
