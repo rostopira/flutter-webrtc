@@ -3,12 +3,12 @@ import 'dart:async';
 import 'dart:js' as JS;
 // ignore: uri_does_not_exist
 import 'dart:html' as HTML;
+import '../rtc_stats_report.dart';
 import 'media_stream.dart';
 import 'media_stream_track.dart';
 import 'rtc_data_channel.dart';
 import 'rtc_ice_candidate.dart';
 import 'rtc_session_description.dart';
-import 'rtc_stats_report.dart';
 import 'utils.dart';
 
 enum RTCSignalingState {
@@ -88,6 +88,7 @@ class RTCPeerConnection {
         final jsTrack = (mediaStreamTrackEvent as HTML.MediaStreamTrackEvent).track;
         final MediaStreamTrack track = MediaStreamTrack(jsTrack);
         mediaStream.addTrack(track, addToNaitve: false);
+        print("Got track ${track.kind}");
         if (onAddTrack != null) {
           onAddTrack(mediaStream, track);
         }
@@ -108,11 +109,12 @@ class RTCPeerConnection {
       }
     });
     _jsPc.onIceCandidate.listen((iceEvent) {
-      if (onIceCandidate != null) {
+      if (onIceCandidate != null && iceEvent != null && iceEvent.candidate != null) {
         onIceCandidate(RTCIceCandidate.fromJs(iceEvent.candidate));
       }
     });
     _jsPc.onIceConnectionStateChange.listen((_) {
+      print("Ice connection state: " + _jsPc.iceConnectionState);
       if (onIceConnectionState != null) {
         final state = iceConnectionStateForString(_jsPc.iceConnectionState);
         onIceConnectionState(state);
@@ -137,12 +139,8 @@ class RTCPeerConnection {
         onSignalingState(state);
       }
     });
-    JS.JsObject.fromBrowserObject(_jsPc)['ontrack'] = JS.JsFunction.withThis((_, trackEvent) {
-      // trackEvent is JsObject conforming to RTCTrackEvent
-      // https://developer.mozilla.org/en-US/docs/Web/API/RTCTrackEvent
-      // TODO(rostopira): implement it
-      // onaddstream doesn't work on Safari, so this is must have
-      print("ontrack arg: ${trackEvent}");
+    _jsPc.addEventListener('track', (e) {
+      print("🦔🦔🦔 TRACK 🦔🦔🦔");
     });
   }
 
@@ -170,8 +168,6 @@ class RTCPeerConnection {
   }
 
   Future<void> addStream(MediaStream stream) {
-    // TODO(rostopira): use addTrack instead
-    // https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/addStream#Migrating_to_addTrack()
     _jsPc.addStream(stream.jsStream);
     return Future.value();
   }
@@ -200,17 +196,35 @@ class RTCPeerConnection {
   }
 
   Future<void> addCandidate(RTCIceCandidate candidate) async {
-    await _jsPc.addIceCandidate(candidate.toJs(), () {
-      print("Ice candidate added");
-    }, (domException) {
-      print(domException);
-    });
+    try {
+      await _jsPc.addIceCandidate(candidate.toJs(), JS.allowInterop(() {
+        print("Ice candidate added");
+      }), JS.allowInterop((domException) {
+        print(domException);
+      }));
+    } catch (e) {
+      final jspc = JS.JsObject.fromBrowserObject(_jsPc);
+      jspc.callMethod('addIceCandidate', [candidate.toMap()]);
+    }
   }
 
   Future<List<StatsReport>> getStats(MediaStreamTrack track) async {
     final stats = await _jsPc.getStats();
-    print(stats);
-    return [];
+    var id = "";
+    var type = "";
+    double timestamp = 0;
+    final values = Map<dynamic, dynamic>();
+    stats.forEach((key, value) {
+      if (key == "id")
+        id = value;
+      else if (key == "type")
+        type = value;
+      else if (key == "timestamp")
+        timestamp = value;
+      else
+        values[key] = value;
+    });
+    return [StatsReport(id, type, timestamp, values)];
   }
 
   List<MediaStream> getLocalStreams() =>

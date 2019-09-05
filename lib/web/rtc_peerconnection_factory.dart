@@ -10,6 +10,10 @@ Future<RTCPeerConnection> createPeerConnection(Map<String, dynamic> configuratio
       {"DtlsSrtpKeyAgreement": true},
     ],
   };
-  final jsRtcPc = HTML.RtcPeerConnection(configuration, constraints);
+  if (constraints.isEmpty)
+    print("⚠️ Warning! Constraints is empty!");
+  else
+    print("⚠️ $constraints");
+  final jsRtcPc = HTML.RtcPeerConnection(configuration, constr);
   return RTCPeerConnection(jsRtcPc);
 }

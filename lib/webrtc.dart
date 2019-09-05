@@ -16,7 +16,6 @@ export 'rtc_peerconnection.dart'
   if (dart.library.js) 'web/rtc_peerconnection.dart';
 export 'rtc_peerconnection_factory.dart'
   if (dart.library.js) 'web/rtc_peerconnection_factory.dart';
-export 'rtc_stats_report.dart'
-  if (dart.library.js) 'web/rtc_stats_report.dart';
+export 'rtc_stats_report.dart';
 export 'media_recorder.dart'
   if (dart.library.js) 'web/media_recorder.dart';

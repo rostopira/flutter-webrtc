@@ -85,6 +85,8 @@ class RTCPeerConnection {
         .receiveBroadcastStream()
         .listen(eventListener, onError: errorListener);
   }
+  
+  void fuck() {}
 
   /*
    * PeerConnection event listener.

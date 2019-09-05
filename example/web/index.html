@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Flutter WebRTC example</title>
+    <script>
+        window.fuckingVideo = function (stream) {
+            const flt = document.getElementsByTagName('flt-platform-view')[0];
+            if (flt === undefined)
+                window.fuckingStream = stream;
+            else
+                flt.shadowRoot.lastChild.srcObject = stream || window.fuckingStream;
+        }
+    </script>
+</head>
+<body>
+    <script src="main.dart.js" type="application/javascript"></script>
+</body>
+</html>

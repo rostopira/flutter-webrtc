@@ -1,6 +1,11 @@
 import 'dart:async';
+// ignore: uri_does_not_exist
+import 'dart:html' as HTML;
+// ignore: uri_does_not_exist
+import 'dart:js' as JS;
 import 'package:flutter/material.dart';
 import 'media_stream.dart';
+import 'dart:ui' as ui;
 
 enum RTCVideoViewObjectFit {
   RTCVideoViewObjectFitContain,
@@ -17,30 +22,53 @@ class RTCVideoRenderer {
 
   double _width = 0.0, _height = 0.0;
   bool _mirror = false;
-  double _aspectRatio = 1.0;
   MediaStream _srcObject;
   RTCVideoViewObjectFit _objectFit =
       RTCVideoViewObjectFit.RTCVideoViewObjectFitContain;
   VideoSizeChangeCallback onVideoSizeChanged;
   VideoRotationChangeCallback onVideoRotationChanged;
   dynamic onFirstFrameRendered;
+  var isFirstFrameRendered = false;
 
   dynamic onStateChanged;
 
+  HtmlElementView htmlElementView;
+  HTML.VideoElement _htmlVideoElement;
+
+  static var _isViewFactoryRegistered = false;
+  static final _videoViews = Map<int, HTML.VideoElement>();
+  static Function(HTML.VideoElement) _nextCallback;
+
   initialize() async {
-    // TODO
+    if (!_isViewFactoryRegistered) {
+      // ignore: implementation_imports
+      ui.platformViewRegistry.registerViewFactory('webrtc_video', (int viewId) {
+        final x = HTML.VideoElement();
+        x.autoplay = true;
+        x.muted = true;
+        if (_srcObject != null)
+          x.srcObject = _srcObject.jsStream;
+        _videoViews[viewId] = x;
+        if (_nextCallback != null)
+          _nextCallback(x);
+        return x;
+      });
+      _isViewFactoryRegistered = true;
+    }
+    _nextCallback = (v) => _htmlVideoElement = v;
+    htmlElementView = HtmlElementView(viewType: 'webrtc_video');
   }
 
   int get rotation => 0;
 
-  double get width => _width;
+  double get width => _width ?? 1080;
 
-  double get height => _height;
+  double get height => _height ?? 1920;
 
   int get textureId => 0;
 
   double get aspectRatio =>
-    (_width == 0 || _height == 0) ? 1.0 : _width / _height;
+    (_width == 0 || _height == 0) ? (9/16) : _width / _height;
 
   bool get mirror => _mirror;
 
@@ -62,12 +90,50 @@ class RTCVideoRenderer {
 
   set srcObject(MediaStream stream) {
     _srcObject = stream;
+//    _videoViews[_htmlViewId]?.srcObject = stream.jsStream;
+    findHtmlView()?.srcObject = stream.jsStream;
+  }
 
-    //TODO
+  void findAndApply(Size size) {
+    final htmlView = findHtmlView();
+    if (_srcObject != null && htmlView != null) {
+      htmlView.srcObject = _srcObject.jsStream;
+      htmlView.width = size.width.toInt();
+      htmlView.height = size.height.toInt();
+      htmlView.onLoadedMetadata.listen((_) {
+        if (htmlView.videoWidth != 0 && htmlView.videoHeight != 0 && (_width != htmlView.videoWidth || _height != htmlView.videoHeight)) {
+          _width = htmlView.videoWidth.toDouble();
+          _height = htmlView.videoHeight.toDouble();
+          if (onVideoSizeChanged != null)
+            onVideoSizeChanged(0, _width, _height);
+        }
+        if (!isFirstFrameRendered && onFirstFrameRendered != null) {
+          onFirstFrameRendered();
+          isFirstFrameRendered = true;
+        }
+      });
+      if (htmlView.videoWidth != 0 && htmlView.videoHeight != 0 && (_width != htmlView.videoWidth || _height != htmlView.videoHeight)) {
+        _width = htmlView.videoWidth.toDouble();
+        _height = htmlView.videoHeight.toDouble();
+        if (onVideoSizeChanged != null)
+          onVideoSizeChanged(0, _width, _height);
+      }
+      htmlView.play();
+    }
+  }
+
+  HTML.VideoElement findHtmlView() {
+    if (_htmlVideoElement != null)
+      return _htmlVideoElement;
+    print("_htmlVideoElement is null");
+    final fltPv = HTML.document.getElementsByTagName('flt-platform-view');
+    if (fltPv.isEmpty)
+      return null;
+    return (fltPv.first as HTML.Element).shadowRoot.lastChild;
   }
 
   Future<Null> dispose() async {
-    //TODO
+    //TODO?
   }
 
 }
@@ -112,34 +178,16 @@ class _RTCVideoViewState extends State<RTCVideoView> {
   }
 
   Widget _buildVideoView(BoxConstraints constraints) {
+    _renderer.findAndApply(constraints.biggest);
     return Container(
       width: constraints.maxWidth,
       height: constraints.maxHeight,
-      child: Text("test"),
+      child: new SizedBox(
+        width: constraints.maxHeight * _aspectRatio,
+        height: constraints.maxHeight,
+        child: _renderer.htmlElementView
+      )
     );
-    //TODO
-//    return Container(
-//      width: constraints.maxWidth,
-//      height: constraints.maxHeight,
-//      child: FittedBox(
-//        fit:
-//          _objectFit == RTCVideoViewObjectFit.RTCVideoViewObjectFitContain
-//            ? BoxFit.contain
-//            : BoxFit.cover,
-//        child: new Center(
-//          child: new SizedBox(
-//            width: constraints.maxHeight * _aspectRatio,
-//            height: constraints.maxHeight,
-//            child: new Transform(
-//              transform: Matrix4.identity()
-//                ..rotateY(_mirror ? -pi : 0.0),
-//              alignment: FractionalOffset.center,
-//              child: new HtmlView()
-//            )
-//          )
-//        )
-//      )
-//    );
   }
 
   @override

@@ -12,6 +12,9 @@ import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("deprecation")
 public final class MyCameraSession implements CameraSession {
+    public static android.hardware.Camera currentlyOpenCamera;
+    public static Handler cameraThread;
+
     private static final String TAG = "MyCameraSession";
     private static final int NUMBER_OF_CAPTURE_BUFFERS = 3;
     private static final Histogram camera1StartTimeMsHistogram =
@@ -46,6 +49,7 @@ public final class MyCameraSession implements CameraSession {
         final android.hardware.Camera camera;
         try {
             camera = android.hardware.Camera.open(cameraId);
+            currentlyOpenCamera = camera;
         } catch (RuntimeException e) {
             callback.onFailure(FailureType.ERROR, e.getMessage());
             return;
@@ -156,6 +160,7 @@ public final class MyCameraSession implements CameraSession {
                            long constructionTimeNs) {
         Logging.d(TAG, "Create new camera1 session on camera " + cameraId);
         this.cameraThreadHandler = new Handler();
+        cameraThread = cameraThreadHandler;
         this.events = events;
         this.captureToTexture = captureToTexture;
         this.applicationContext = applicationContext;
@@ -254,8 +259,10 @@ public final class MyCameraSession implements CameraSession {
             modifiedFrame.release();
         });
     }
+
+    public static android.hardware.Camera.PreviewCallback previewCallback;
     private void listenForBytebufferFrames() {
-        camera.setPreviewCallbackWithBuffer((data, callbackCamera) -> {
+        previewCallback = (data, callbackCamera) -> {
             checkIsOnCameraThread();
             if (callbackCamera != camera) {
                 Logging.e(TAG, "Callback from a different camera. This should never happen.");
@@ -281,7 +288,8 @@ public final class MyCameraSession implements CameraSession {
             final VideoFrame frame = new VideoFrame(frameBuffer, getFrameOrientation(), captureTimeNs);
             events.onFrameCaptured(MyCameraSession.this, frame);
             frame.release();
-        });
+        };
+        camera.setPreviewCallbackWithBuffer(previewCallback);
     }
     private int getFrameOrientation() {
         int rotation = CameraSession.getDeviceOrientation(applicationContext);

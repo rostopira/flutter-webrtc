@@ -14,7 +14,7 @@ RTCIceConnectionState iceConnectionStateForString(String state) {
     case "connected":
       return RTCIceConnectionState.RTCIceConnectionStateConnected;
     case "completed":
-      return RTCIceConnectionState.RTCIceConnectionStateCompleted;
+      return RTCIceConnectionState.RTCIceConnectionStateConnected; //just for debug
     case "failed":
       return RTCIceConnectionState.RTCIceConnectionStateFailed;
     case "disconnected":

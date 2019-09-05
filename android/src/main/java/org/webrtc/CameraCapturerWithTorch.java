@@ -40,14 +40,7 @@ public final class CameraCapturerWithTorch extends Camera1Capturer implements Ca
         }
     }
 
-    public void setTorch(boolean enabled) throws Exception {
-//        // Private? Really? Oh for fucks sake...
-//        Field f = cameraSession.getClass().getDeclaredField("camera");
-//        // Hello, poorly designed class
-//        f.setAccessible(true);
-//        // Give it to me plz
-//        Camera camera = (Camera) f.get(cameraSession);
-//        // Thank you, piece of shit
+    public void setTorch(boolean enabled) {
         Camera camera = cameraSession.camera;
         final Camera.Parameters parameters = camera.getParameters();
         parameters.setFlashMode(enabled ? Camera.Parameters.FLASH_MODE_TORCH : Camera.Parameters.FLASH_MODE_OFF);
