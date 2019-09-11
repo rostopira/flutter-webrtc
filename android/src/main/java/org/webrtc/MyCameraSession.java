@@ -37,6 +37,8 @@ public final class MyCameraSession implements CameraSession {
     private final long constructionTimeNs; // Construction time of this class.
     private SessionState state;
     private boolean firstFrameReported;
+    private CameraOrientationListener cameraOrientationListener;
+
     // TODO(titovartem) make correct fix during webrtc:9175
     @SuppressWarnings("ByteBufferBackingArray")
     public static void create(final CreateSessionCallback callback, final Events events,
@@ -171,10 +173,13 @@ public final class MyCameraSession implements CameraSession {
         this.captureFormat = captureFormat;
         this.constructionTimeNs = constructionTimeNs;
         surfaceTextureHelper.setTextureSize(captureFormat.width, captureFormat.height);
+        cameraOrientationListener = new CameraOrientationListener(camera, cameraId, applicationContext);
         startCapturing();
+        cameraOrientationListener.start();
     }
     @Override
     public void stop() {
+        cameraOrientationListener.stop();
         Logging.d(TAG, "Stop camera1 session on camera " + cameraId);
         checkIsOnCameraThread();
         if (state != SessionState.STOPPED) {
@@ -292,6 +297,8 @@ public final class MyCameraSession implements CameraSession {
         camera.setPreviewCallbackWithBuffer(previewCallback);
     }
     private int getFrameOrientation() {
+        if (cameraOrientationListener != null)
+            return cameraOrientationListener.lastDetectedOrientation % 360;
         int rotation = CameraSession.getDeviceOrientation(applicationContext);
         if (info.facing == android.hardware.Camera.CameraInfo.CAMERA_FACING_BACK) {
             rotation = 360 - rotation;

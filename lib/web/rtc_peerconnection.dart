@@ -210,21 +210,11 @@ class RTCPeerConnection {
 
   Future<List<StatsReport>> getStats(MediaStreamTrack track) async {
     final stats = await _jsPc.getStats();
-    var id = "";
-    var type = "";
-    double timestamp = 0;
-    final values = Map<dynamic, dynamic>();
-    stats.forEach((key, value) {
-      if (key == "id")
-        id = value;
-      else if (key == "type")
-        type = value;
-      else if (key == "timestamp")
-        timestamp = value;
-      else
-        values[key] = value;
+    final result = List<StatsReport>();
+    stats.forEach((id, value) {
+      result.add(StatsReport(id, value['type'], value['timestamp'], value));
     });
-    return [StatsReport(id, type, timestamp, values)];
+    return result;
   }
 
   List<MediaStream> getLocalStreams() =>

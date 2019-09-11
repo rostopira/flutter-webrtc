@@ -6,7 +6,6 @@ import 'dart:js' as JS;
 
 class MediaStreamTrack {
   final HTML.MediaStreamTrack jsTrack;
-  HTML.VideoElement videoElement;
 
   MediaStreamTrack(this.jsTrack);
 
@@ -38,24 +37,17 @@ class MediaStreamTrack {
     );
   }
 
-  Future<void> captureFrame(String filePath, int rotation) async {
-    final video = videoElement;
-    if (video == null)
-      throw "Not attached to video element!";
+  Future<dynamic> captureFrame([String filePath, int rotation]) async {
+    final imageCapture = HTML.ImageCapture(jsTrack);
+    final HTML.ImageBitmap bitmap = await imageCapture.grabFrame();
     final HTML.CanvasElement canvas = HTML.Element.canvas();
-    final HTML.CanvasRenderingContext2D context = canvas.getContext('2d');
-    final settings = jsTrack.getSettings();
-    var width = settings['width'];
-    var height = settings['height'];
-    if (width is! num || height is! num)
-      throw "Unable to get video size";
-    width = (width as num).toInt();
-    height = (height as num).toInt();
-    canvas.width = width;
-    canvas.height = height;
-    context.drawImageScaled(video, 0, 0, width, height);
-    final resultData = canvas.toDataUrl('image/jpg');
-    return Future.value(resultData);
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    final HTML.ImageBitmapRenderingContext renderer = canvas.getContext('bitmaprenderer');
+    renderer.transferFromImageBitmap(bitmap);
+    final dataUrl = canvas.toDataUrl();
+    bitmap.close();
+    return dataUrl;
   }
 
   Future<dynamic> torch(bool enabled) async {

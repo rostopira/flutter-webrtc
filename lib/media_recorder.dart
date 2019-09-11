@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:flutter_webrtc/media_stream_track.dart';
-import 'package:flutter_webrtc/utils.dart';
+import 'media_stream_track.dart';
+import 'media_stream.dart';
+import 'utils.dart';
 
 class MediaRecorder {
   static final _random = Random();
@@ -31,10 +32,17 @@ class MediaRecorder {
     });
   }
 
-  Future<void> stop() async =>
-      await WebRTC.methodChannel().invokeMethod('stopRecordToFile', {
-        'recorderId' : _recorderId
-      });
+  void startWeb(MediaStream stream, {
+    Function(dynamic blob, bool isLastOne) onDataChunk,
+    String mimeType = 'video/webm'
+  }) {
+    throw "WTF?";
+  }
+
+  Future<dynamic> stop() async =>
+    await WebRTC.methodChannel().invokeMethod('stopRecordToFile', {
+      'recorderId' : _recorderId
+    });
 
 }
 

@@ -28,6 +28,12 @@ class RTCVideoRenderer {
   VideoRotationChangeCallback onVideoRotationChanged;
   dynamic onFirstFrameRendered;
 
+  /// For web only!
+  var isMuted = true;
+
+  /// For web only!
+  static void fixVideoElements() {}
+
   initialize() async {
     final Map<dynamic, dynamic> response =
         await _channel.invokeMethod('createVideoRenderer', {});

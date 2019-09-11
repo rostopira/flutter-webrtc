@@ -44,7 +44,7 @@ class MediaStreamTrack {
     );
   }
 
-  captureFrame(String filePath, int rotation) =>
+  captureFrame([String filePath, int rotation]) =>
     _channel.invokeMethod(
       'captureFrame',
       <String, dynamic>{

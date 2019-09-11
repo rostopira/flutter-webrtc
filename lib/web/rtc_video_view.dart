@@ -16,8 +16,6 @@ typedef void VideoRotationChangeCallback(int textureId, int rotation);
 typedef void VideoSizeChangeCallback(
     int textureId, double width, double height);
 
-/// STUB
-/// https://github.com/flutter/flutter/pull/37819
 class RTCVideoRenderer {
 
   double _width = 0.0, _height = 0.0;
@@ -39,10 +37,20 @@ class RTCVideoRenderer {
   static final _videoViews = Map<int, HTML.VideoElement>();
   static Function(HTML.VideoElement) _nextCallback;
 
+  bool get isMuted => _htmlVideoElement?.muted ?? true;
+  set isMuted(bool i) => _htmlVideoElement?.muted = i;
+
+  static void fixVideoElements() =>
+    _videoViews.values.forEach((v) => v.play());
+
+  /// Currently contains hacky solution
+  /// Multiple videos won't work
+  /// Waiting for onPlatformViewCreated callback implementation
   initialize() async {
     if (!_isViewFactoryRegistered) {
       // ignore: implementation_imports
       ui.platformViewRegistry.registerViewFactory('webrtc_video', (int viewId) {
+        print("Platform view creation");
         final x = HTML.VideoElement();
         x.autoplay = true;
         x.muted = true;
@@ -90,13 +98,16 @@ class RTCVideoRenderer {
 
   set srcObject(MediaStream stream) {
     _srcObject = stream;
-//    _videoViews[_htmlViewId]?.srcObject = stream.jsStream;
     findHtmlView()?.srcObject = stream.jsStream;
   }
 
   void findAndApply(Size size) {
     final htmlView = findHtmlView();
     if (_srcObject != null && htmlView != null) {
+      if (htmlView.width == size.width.toInt() && htmlView.height == size.height.toInt()) {
+        print("Same size, return");
+        return;
+      }
       htmlView.srcObject = _srcObject.jsStream;
       htmlView.width = size.width.toInt();
       htmlView.height = size.height.toInt();
@@ -112,20 +123,26 @@ class RTCVideoRenderer {
           isFirstFrameRendered = true;
         }
       });
+      htmlView.onResize.listen((_) {
+        if (htmlView.videoWidth != 0 && htmlView.videoHeight != 0 && (_width != htmlView.videoWidth || _height != htmlView.videoHeight)) {
+          _width = htmlView.videoWidth.toDouble();
+          _height = htmlView.videoHeight.toDouble();
+          if (onVideoSizeChanged != null)
+            onVideoSizeChanged(0, _width, _height);
+        }
+      });
       if (htmlView.videoWidth != 0 && htmlView.videoHeight != 0 && (_width != htmlView.videoWidth || _height != htmlView.videoHeight)) {
         _width = htmlView.videoWidth.toDouble();
         _height = htmlView.videoHeight.toDouble();
         if (onVideoSizeChanged != null)
           onVideoSizeChanged(0, _width, _height);
       }
-      htmlView.play();
     }
   }
 
   HTML.VideoElement findHtmlView() {
     if (_htmlVideoElement != null)
       return _htmlVideoElement;
-    print("_htmlVideoElement is null");
     final fltPv = HTML.document.getElementsByTagName('flt-platform-view');
     if (fltPv.isEmpty)
       return null;

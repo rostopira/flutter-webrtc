@@ -25,21 +25,28 @@ class MediaRecorder {
   }
 
   /// Only for Flutter Web
-  startWeb(MediaStream stream, {
+  void startWeb(MediaStream stream, {
     Function(dynamic blob, bool isLastOne) onDataChunk,
-    String mimeType = 'video/mp4;codecs=h264'
+    String mimeType = '"video/x-matroska'
   }) {
-    _recorder = HTML.MediaRecorder(stream.jsStream, {'mimeType':mimeType});
+    _recorder = HTML.MediaRecorder(stream.jsStream);//, {'mimeType':mimeType, 'ignoreMutedMedia': false});
     if (onDataChunk == null) {
       _chunks = List();
       _completer = Completer();
+      JS.context['rec'] = JS.JsObject.fromBrowserObject(_recorder);
+      _recorder.onError.listen((x) {
+        print(x);
+      });
       _recorder.addEventListener('dataavailable', (HTML.Event event) {
+        print("datavailable ${event.runtimeType}");
         final HTML.Blob blob = JS.JsObject.fromBrowserObject(event)['data'];
+        print("BLOB SIZE: ${blob.size}");
         if (blob.size > 0) {
           _chunks.add(blob);
         }
         if (_recorder.state == 'inactive') {
-          _completer?.complete(HTML.Blob(_chunks, mimeType));
+          final blob = HTML.Blob(_chunks, mimeType);
+          _completer?.complete(HTML.Url.createObjectUrlFromBlob(blob));
           _completer = null;
         }
       });
@@ -53,6 +60,7 @@ class MediaRecorder {
         onDataChunk(blob, _recorder.state == 'inactive');
       });
     }
+    _recorder.start(2048);
   }
 
   Future<dynamic> stop() {
