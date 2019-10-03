@@ -1,7 +1,10 @@
 #import <Foundation/Foundation.h>
+#import "MyCameraCapturer.h"
 #import "FlutterWebRTCPlugin.h"
 
 @interface FlutterWebRTCPlugin (RTCMediaStream)
+
++(MyCameraCapturer *)getCameraCapturer;
 
 -(void)getUserMedia:(NSDictionary *)constraints
              result:(FlutterResult)result;

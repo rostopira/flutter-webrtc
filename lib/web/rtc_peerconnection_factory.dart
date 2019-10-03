@@ -13,7 +13,9 @@ Future<RTCPeerConnection> createPeerConnection(Map<String, dynamic> configuratio
   if (constraints.isEmpty)
     print("⚠️ Warning! Constraints is empty!");
   else
-    print("⚠️ $constraints");
+    print("$constr");
+  print(configuration);
   final jsRtcPc = HTML.RtcPeerConnection(configuration, constr);
+  print("here 228");
   return RTCPeerConnection(jsRtcPc);
 }

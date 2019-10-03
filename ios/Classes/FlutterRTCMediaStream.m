@@ -290,7 +290,8 @@ typedef void (^NavigatorUserMediaSuccessCallback)(RTCMediaStream *mediaStream);
     
     if (videoDevice) {
         RTCVideoSource *videoSource = [self.peerConnectionFactory videoSource];
-        self.videoCapturer = [[RTCCameraVideoCapturer alloc] initWithDelegate:videoSource];
+        self.videoCapturer = [[MyCameraCapturer alloc] initWithDelegate:videoSource];
+        cameraVideoCapturer = self.videoCapturer;
         AVCaptureDeviceFormat *selectedFormat = [self selectFormatForDevice:videoDevice];
         NSInteger selectedFps = [self selectFpsForFormat:selectedFormat];
         [self.videoCapturer startCaptureWithDevice:videoDevice format:selectedFormat fps:selectedFps completionHandler:^(NSError *error) {
@@ -559,6 +560,11 @@ typedef void (^NavigatorUserMediaSuccessCallback)(RTCMediaStream *mediaStream);
         maxSupportedFramerate = fmax(maxSupportedFramerate, fpsRange.maxFrameRate);
     }
     return fmin(maxSupportedFramerate, self._targetFps);
+}
+
+static MyCameraCapturer *cameraVideoCapturer;
++(MyCameraCapturer *)getCameraCapturer {
+    return cameraVideoCapturer;
 }
 
 @end

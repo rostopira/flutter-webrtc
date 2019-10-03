@@ -3,7 +3,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'flutter_webrtc'
-  s.version          = '1.0.1'
+  s.version          = '1.0.5'
   s.summary          = 'Flutter WebRTC plugin for iOS/Android.'
   s.description      = <<-DESC
 A new flutter plugin project.
@@ -17,7 +17,8 @@ A new flutter plugin project.
   s.dependency 'Flutter'
   s.dependency 'libyuv-iOS'
   s.dependency 'GoogleWebRTC', '1.1.27121'
-#  s.dependency 'GoogleWebRTC', '1.1.28604'
+#  s.dependency 'GoogleWebRTC', '1.1.29024'
+#  s.vendored_frameworks = 'WebRTC.framework'
   s.ios.deployment_target = '9.0'
   s.static_framework = true
 end

@@ -2,6 +2,7 @@
 #import "WebRTC/RTCAudioTrack.h"
 #import "WebRTC/RTCAudioSource.h"
 
+//@interface FlutterRTCAudioSink : RTCAudioSink
 @interface FlutterRTCAudioSink : NSObject
 
 @property (nonatomic, copy) void (^bufferCallback)(CMSampleBufferRef);

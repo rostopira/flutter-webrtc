@@ -66,3 +66,29 @@ void RTCAudioSinkCallback (void *object, const void *audio_data, int bits_per_sa
 }
 
 @end
+
+//#import <Foundation/Foundation.h>
+//#import <CoreMedia/CoreMedia.h>
+//#import "FlutterRTCAudioSink.h"
+//
+//@implementation FlutterRTCAudioSink : RTCAudioSink {
+//    RTCAudioTrack* _audioTrack;
+//}
+//
+//- (instancetype) initWithAudioTrack:(RTCAudioTrack* )audio {
+//    self = [super init];
+//    _audioTrack = audio;
+//    [audio add:self];
+//    return self;
+//}
+//
+//- (void) close {
+//    [_audioTrack remove:self];
+//}
+//
+//-(void) onData:(CMSampleBufferRef) buffer {
+//    if (_bufferCallback)
+//        _bufferCallback(buffer);
+//}
+//
+//@end
